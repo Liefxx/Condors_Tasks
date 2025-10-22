@@ -9,22 +9,33 @@ const axios = require('axios');
  * @returns {object} The JSON payload ready to be sent to Discord.
  */
 function transformPayload(notionPayload) {
-  // --- THIS IS THE FIX ---
-  // We get the data from notionPayload.data
+  // --- ADD YOUR 10 USERS HERE ---
+  // 1. Find Discord User IDs (Enable Developer Mode in Discord, right-click user, "Copy User ID")
+  const USER_ID_MAP = {
+    // "Full Name from Notion": "Discord User ID String"
+    "Brody Moore": "101740777587089408",
+    "User Two Name": "PASTE_USER_TWO_ID_HERE",
+    "User Three Name": "PASTE_USER_THREE_ID_HERE",
+    "User Four Name": "PASTE_USER_FOUR_ID_HERE",
+    "User Five Name": "PASTE_USER_FIVE_ID_HERE",
+    "User Six Name": "PASTE_USER_SIX_ID_HERE",
+    "User Seven Name": "PASTE_USER_SEVEN_ID_HERE",
+    "User Eight Name": "PASTE_USER_EIGHT_ID_HERE",
+    "User Nine Name": "PASTE_USER_NINE_ID_HERE",
+    "User Ten Name": "PASTE_USER_TEN_ID_HERE"
+  };
+  // --------------------------
+
   const pageData = notionPayload.data; 
-
-  // --- 1. Get the Page Name ---
   const pageName = pageData?.properties?.Task?.title?.[0]?.plain_text;
-
-  // --- 2. Get the Assignee ---
   const assignee = pageData?.properties?.Assignee?.people?.[0]?.name;
-  
-  // --- 3. Get the Page URL ---
   const pageUrl = pageData?.url;
 
-  // Now we build the Discord message
+  const discordUserId = USER_ID_MAP[assignee]; // Find the ID from the map
+  const userTag = discordUserId ? `<@${discordUserId}>` : ''; // Create the <@...> tag
+
   return {
-    content: `Notion Task Updated: **${pageName || 'Unknown Task'}**`,
+    content: `Notion Task Updated: **${pageName || 'Unknown Task'}** ${userTag}`, // Add the tag to the content
     embeds: [
       {
         title: pageName || 'Task Update',
@@ -46,6 +57,10 @@ function transformPayload(notionPayload) {
         timestamp: new Date().toISOString(),
       },
     ],
+    // This is new: It tells Discord "Yes, I really mean to ping this user"
+    allowed_mentions: {
+      users: (discordUserId ? [discordUserId] : []) // Only allow pinging the specific user
+    }
   };
 }
 
@@ -70,7 +85,6 @@ module.exports = async (req, res) => {
 
   try {
     // 3. Log the incoming body from Notion (useful for debugging!)
-    // This is the log that should be appearing in Vercel
     console.log('Received payload from Notion:', JSON.stringify(req.body, null, 2));
 
     // 4. Transform the payload
@@ -91,7 +105,6 @@ module.exports = async (req, res) => {
     }
 
     // --- DEBUGGING CODE ---
-    // If the above fails, this code will send a debug message *to* Discord
     try {
       const debugPayload = {
         content: "⚠️ **DEBUG: Notion Webhook Failed**",
@@ -121,7 +134,6 @@ module.exports = async (req, res) => {
     }
     // --- END DEBUGGING CODE ---
 
-    // Finally, send the error response back to Notion
     res.status(500).json({ error: 'Failed to send payload to Discord.' });
   }
 };
