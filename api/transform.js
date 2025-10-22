@@ -51,7 +51,7 @@ function transformPayload(notionPayload) {
 
 /**
  * This is the main serverless function handler.
- * Vercel will run this code every time your /api/transform URL is called.
+ * Vercel will run this code every time your /api/handler URL is called.
  */
 module.exports = async (req, res) => {
   // 1. Check if this is a POST request (which Notion webhooks are)
@@ -103,5 +103,26 @@ module.exports = async (req, res) => {
             fields: [
               {
                 name: "Discord API Error (if any)",
-                value: "
+                // **THIS IS THE FIXED LINE**
+                value: (error.response ? JSON.stringify(error.response.data) : "N/A")
+              },
+              {
+                name: "Full Notion Payload (First 1000 chars)",
+                value: "```json\n" + JSON.stringify(req.body, null, 2).substring(0, 1000) + "\n```"
+              }
+            ]
+          }
+        ]
+      };
+      await axios.post(discordWebhookUrl, debugPayload, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+    } catch (debugError) {
+      console.error("Failed to send debug message:", debugError.message);
+    }
+    // --- END DEBUGGING CODE ---
 
+    // Finally, send the error response back to Notion
+    res.status(500).json({ error: 'Failed to send payload to Discord.' });
+  }
+};
