@@ -5,10 +5,7 @@ const axios = require('axios');
  * It takes the FULL, complex JSON from Notion (req.body) and turns it into
  * the JSON format Discord expects.
  *
- * --- THIS IS THE UPDATED CODE ---
- *
- * It is now looking for properties named "Task" (for the title)
- * and "Assignee" (for the status field).
+ * This is a GUESS based on your properties: "Task" and "Assignee".
  *
  * @param {object} notionPayload The incoming JSON body from your Notion Automation.
  * @returns {object} The JSON payload ready to be sent to Discord.
@@ -16,12 +13,10 @@ const axios = require('axios');
 function transformPayload(notionPayload) {
   // --- Example Transformation ---
 
-  // --- 1. Get the Page Name (Changed "Name" to "Task") ---
+  // --- 1. Get the Page Name (Guessing "Task") ---
   const pageName = notionPayload.properties?.Task?.title?.[0]?.plain_text;
 
-  // --- 2. Get the Assignee (Changed "Status" to "Assignee") ---
-  // An "Assignee" (person) property is structured differently than a "Status"
-  // We will try to get the first person's name.
+  // --- 2. Get the Assignee (Guessing "Assignee") ---
   const assignee = notionPayload.properties?.Assignee?.people?.[0]?.name;
   
   // --- 3. Get the Page URL ---
@@ -75,6 +70,7 @@ module.exports = async (req, res) => {
 
   try {
     // 3. Log the incoming body from Notion (useful for debugging!)
+    // This is the log that should be appearing in Vercel
     console.log('Received payload from Notion:', JSON.stringify(req.body, null, 2));
 
     // 4. Transform the payload
@@ -93,7 +89,19 @@ module.exports = async (req, res) => {
     if (error.response) {
       console.error('Discord API Error:', error.response.data);
     }
-    res.status(500).json({ error: 'Failed to send payload to Discord.' });
-  }
-};
+
+    // --- DEBUGGING CODE ---
+    // If the above fails, this code will send a debug message *to* Discord
+    try {
+      const debugPayload = {
+        content: "⚠️ **DEBUG: Notion Webhook Failed**",
+        embeds: [
+          {
+            title: "Error Message",
+            description: error.message || "An unknown error occurred.",
+            color: 16711680, // Red
+            fields: [
+              {
+                name: "Discord API Error (if any)",
+                value: "
 
