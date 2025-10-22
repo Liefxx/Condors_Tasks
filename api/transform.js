@@ -5,49 +5,40 @@ const axios = require('axios');
  * It takes the FULL, complex JSON from Notion (req.body) and turns it into
  * the JSON format Discord expects.
  *
- * --- YOU MUST CUSTOMIZE THIS ---
+ * --- THIS IS THE UPDATED CODE ---
  *
- * This function is making a GUESS that your database has properties
- * named exactly "Name" and "Status".
- *
- * If your properties are "Task Name" or "Assignee", you MUST change
- * the lines below (e.g., `notionPayload.properties['Task Name']`).
- *
- * Check your Vercel logs to see the *exact* JSON Notion sends.
+ * It is now looking for properties named "Task" (for the title)
+ * and "Assignee" (for the status field).
  *
  * @param {object} notionPayload The incoming JSON body from your Notion Automation.
  * @returns {object} The JSON payload ready to be sent to Discord.
  */
 function transformPayload(notionPayload) {
   // --- Example Transformation ---
-  // We parse the complex default Notion payload.
-  // We use optional chaining (?.) to avoid errors if a property is missing.
 
-  // --- 1. Get the Page Name ---
-  // We're GUESSING your "Name" property is called "Name".
-  // If it's "Task", change this to: notionPayload.properties?.Task?.title?.[0]?.plain_text;
-  const pageName = notionPayload.properties?.Name?.title?.[0]?.plain_text;
+  // --- 1. Get the Page Name (Changed "Name" to "Task") ---
+  const pageName = notionPayload.properties?.Task?.title?.[0]?.plain_text;
 
-  // --- 2. Get the Status ---
-  // We're GUESSING your "Status" property is called "Status".
-  const status = notionPayload.properties?.Status?.status?.name;
+  // --- 2. Get the Assignee (Changed "Status" to "Assignee") ---
+  // An "Assignee" (person) property is structured differently than a "Status"
+  // We will try to get the first person's name.
+  const assignee = notionPayload.properties?.Assignee?.people?.[0]?.name;
   
   // --- 3. Get the Page URL ---
-  // This one is usually reliable.
   const pageUrl = notionPayload.url;
 
   // Now we build the Discord message
   return {
-    content: `Notion Page Updated: **${pageName || 'Unknown Page'}**`,
+    content: `Notion Task Updated: **${pageName || 'Unknown Task'}**`,
     embeds: [
       {
-        title: pageName || 'Page Update',
+        title: pageName || 'Task Update',
         url: pageUrl, // Makes the title a clickable link
-        description: `A page was just updated in your Notion database.`,
+        description: `A task was just updated in your Notion database.`,
         fields: [
           {
-            name: 'Status',
-            value: status || 'N/A', // Shows the status, or "N/A" if not found
+            name: 'Assignee',
+            value: assignee || 'N/A', // Shows the assignee, or "N/A"
             inline: true,
           },
           {
@@ -84,12 +75,9 @@ module.exports = async (req, res) => {
 
   try {
     // 3. Log the incoming body from Notion (useful for debugging!)
-    //    This is CRITICAL. You will check your Vercel logs to see
-    //    the exact data Notion is sending.
     console.log('Received payload from Notion:', JSON.stringify(req.body, null, 2));
 
     // 4. Transform the payload
-    //    We pass the *entire* body from Notion to our function.
     const discordPayload = transformPayload(req.body);
 
     // 5. Send the new payload to Discord
