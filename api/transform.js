@@ -1,46 +1,53 @@
-// We'll use 'axios' to send the data to Discord.
-// Make sure to add it to your package.json!
 const axios = require('axios');
 
 /**
  * This is the core transformation logic.
- * It takes the JSON from Notion (req.body) and turns it into
+ * It takes the FULL, complex JSON from Notion (req.body) and turns it into
  * the JSON format Discord expects.
  *
- * YOU WILL NEED TO CUSTOMIZE THIS FUNCTION
- * based on the "Payload" you configure in your Notion Automation.
+ * --- YOU MUST CUSTOMIZE THIS ---
+ *
+ * This function is making a GUESS that your database has properties
+ * named exactly "Name" and "Status".
+ *
+ * If your properties are "Task Name" or "Assignee", you MUST change
+ * the lines below (e.g., `notionPayload.properties['Task Name']`).
+ *
+ * Check your Vercel logs to see the *exact* JSON Notion sends.
  *
  * @param {object} notionPayload The incoming JSON body from your Notion Automation.
  * @returns {object} The JSON payload ready to be sent to Discord.
  */
 function transformPayload(notionPayload) {
   // --- Example Transformation ---
-  // Let's assume your Notion Automation sends a payload like this:
-  // {
-  //   "pageName": "Deploy the app",
-  //   "status": "Done",
-  //   "pageUrl": "https://www.notion.so/..."
-  // }
-  //
-  // We will transform it into a Discord Embed:
+  // We parse the complex default Notion payload.
+  // We use optional chaining (?.) to avoid errors if a property is missing.
 
-  const { pageName, status, pageUrl } = notionPayload;
+  // --- 1. Get the Page Name ---
+  // We're GUESSING your "Name" property is called "Name".
+  // If it's "Task", change this to: notionPayload.properties?.Task?.title?.[0]?.plain_text;
+  const pageName = notionPayload.properties?.Name?.title?.[0]?.plain_text;
 
-  // You can customize this Discord payload however you like.
-  // See the Discord webhook guide for all the options:
-  // https://birdie0.github.io/discord-webhooks-guide/discord_webhook.html
+  // --- 2. Get the Status ---
+  // We're GUESSING your "Status" property is called "Status".
+  const status = notionPayload.properties?.Status?.status?.name;
+  
+  // --- 3. Get the Page URL ---
+  // This one is usually reliable.
+  const pageUrl = notionPayload.url;
+
+  // Now we build the Discord message
   return {
-    // You can set a simple text message here
     content: `Notion Page Updated: **${pageName || 'Unknown Page'}**`,
     embeds: [
       {
         title: pageName || 'Page Update',
         url: pageUrl, // Makes the title a clickable link
-        description: `The page status was just updated.`,
+        description: `A page was just updated in your Notion database.`,
         fields: [
           {
-            name: 'New Status',
-            value: status || 'N/A',
+            name: 'Status',
+            value: status || 'N/A', // Shows the status, or "N/A" if not found
             inline: true,
           },
           {
@@ -68,7 +75,6 @@ module.exports = async (req, res) => {
   }
 
   // 2. Get the Discord Webhook URL from environment variables
-  //    We do this so your secret URL isn't saved in your code.
   const discordWebhookUrl = process.env.DISCORD_WEBHOOK_URL;
   if (!discordWebhookUrl) {
     console.error('DISCORD_WEBHOOK_URL is not set.');
@@ -78,10 +84,12 @@ module.exports = async (req, res) => {
 
   try {
     // 3. Log the incoming body from Notion (useful for debugging!)
-    //    You can check your Vercel logs to see the exact data Notion is sending.
+    //    This is CRITICAL. You will check your Vercel logs to see
+    //    the exact data Notion is sending.
     console.log('Received payload from Notion:', JSON.stringify(req.body, null, 2));
 
     // 4. Transform the payload
+    //    We pass the *entire* body from Notion to our function.
     const discordPayload = transformPayload(req.body);
 
     // 5. Send the new payload to Discord
@@ -94,10 +102,10 @@ module.exports = async (req, res) => {
 
   } catch (error) {
     console.error('Error processing webhook:', error.message);
-    // Log error details if available
     if (error.response) {
       console.error('Discord API Error:', error.response.data);
     }
     res.status(500).json({ error: 'Failed to send payload to Discord.' });
   }
 };
+
