@@ -5,22 +5,22 @@ const axios = require('axios');
  * It takes the FULL, complex JSON from Notion (req.body) and turns it into
  * the JSON format Discord expects.
  *
- * This is a GUESS based on your properties: "Task" and "Assignee".
- *
  * @param {object} notionPayload The incoming JSON body from your Notion Automation.
  * @returns {object} The JSON payload ready to be sent to Discord.
  */
 function transformPayload(notionPayload) {
-  // --- Example Transformation ---
+  // --- THIS IS THE FIX ---
+  // We get the data from notionPayload.data
+  const pageData = notionPayload.data; 
 
-  // --- 1. Get the Page Name (Guessing "Task") ---
-  const pageName = notionPayload.properties?.Task?.title?.[0]?.plain_text;
+  // --- 1. Get the Page Name ---
+  const pageName = pageData?.properties?.Task?.title?.[0]?.plain_text;
 
-  // --- 2. Get the Assignee (Guessing "Assignee") ---
-  const assignee = notionPayload.properties?.Assignee?.people?.[0]?.name;
+  // --- 2. Get the Assignee ---
+  const assignee = pageData?.properties?.Assignee?.people?.[0]?.name;
   
   // --- 3. Get the Page URL ---
-  const pageUrl = notionPayload.url;
+  const pageUrl = pageData?.url;
 
   // Now we build the Discord message
   return {
