@@ -38,7 +38,7 @@ function transformPayload(notionPayload) {
 
   // Build the message payload
   const messagePayload = {
-    content: `Hello ${assigneeName}! A Notion task assigned to you was just updated:`,
+    content: `Hello ${assigneeName}! you have a new task in Notion:`,
     embeds: [
       {
         title: pageName || 'Task Update',
