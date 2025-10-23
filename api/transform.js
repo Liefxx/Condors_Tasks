@@ -2,19 +2,17 @@ const axios = require('axios');
 
 /**
  * This is the core transformation logic.
- * It takes the FULL, complex JSON from Notion (req.body) and turns it into
- * the JSON format Discord expects.
+ * It builds the message payload for Discord.
  *
  * @param {object} notionPayload The incoming JSON body from your Notion Automation.
- * @returns {object} The JSON payload ready to be sent to Discord.
+ * @returns {object} The message payload (content and embed)
  */
 function transformPayload(notionPayload) {
   // --- ADD YOUR 10 USERS HERE ---
-  // 1. Find Discord User IDs (Enable Developer Mode in Discord, right-click user, "Copy User ID")
   const USER_ID_MAP = {
     // "Full Name from Notion": "Discord User ID String"
-    "Brody Moore": "101740777587089408",
-    "User Two Name": "PASTE_USER_TWO_ID_HERE",
+    "Brody Moore": "PASTE_BRODY_DISCORD_ID_HERE",
+    "User Two Name": "101740777587089408",
     "User Three Name": "PASTE_USER_THREE_ID_HERE",
     "User Four Name": "PASTE_USER_FOUR_ID_HERE",
     "User Five Name": "PASTE_USER_FIVE_ID_HERE",
@@ -28,25 +26,25 @@ function transformPayload(notionPayload) {
 
   const pageData = notionPayload.data; 
   const pageName = pageData?.properties?.Task?.title?.[0]?.plain_text;
-  const assignee = pageData?.properties?.Assignee?.people?.[0]?.name;
+  const assigneeName = pageData?.properties?.Assignee?.people?.[0]?.name;
   const pageUrl = pageData?.url;
 
-  const discordUserId = USER_ID_MAP[assignee]; // Find the ID from the map
-  const userTag = discordUserId ? `<@${discordUserId}>` : ''; // Create the <@...> tag
+  const discordUserId = USER_ID_MAP[assigneeName]; // Find the ID from the map
 
-  return {
-    content: `Notion Task Updated: **${pageName || 'Unknown Task'}** ${userTag}`, // Add the tag to the content
+  if (!discordUserId) {
+    console.warn(`No Discord User ID found for Notion user: ${assigneeName}`);
+    return null; // Return null if no user is found
+  }
+
+  // Build the message payload
+  const messagePayload = {
+    content: `Hello ${assigneeName}! A Notion task assigned to you was just updated:`,
     embeds: [
       {
         title: pageName || 'Task Update',
         url: pageUrl, // Makes the title a clickable link
-        description: `A task was just updated in your Notion database.`,
+        description: `**Task:** ${pageName || 'Unknown Task'}`,
         fields: [
-          {
-            name: 'Assignee',
-            value: assignee || 'N/A', // Shows the assignee, or "N/A"
-            inline: true,
-          },
           {
             name: 'Page URL',
             value: pageUrl ? `[Click to view](${pageUrl})` : 'No URL provided',
@@ -57,11 +55,45 @@ function transformPayload(notionPayload) {
         timestamp: new Date().toISOString(),
       },
     ],
-    // This is new: It tells Discord "Yes, I really mean to ping this user"
-    allowed_mentions: {
-      users: (discordUserId ? [discordUserId] : []) // Only allow pinging the specific user
-    }
   };
+  
+  return { discordUserId, messagePayload };
+}
+
+/**
+ * Helper function to send the DM
+ */
+async function sendDm(botToken, userId, payload) {
+  const discordApi = axios.create({
+    baseURL: 'https://discord.com/api/v10',
+    headers: {
+      'Authorization': `Bot ${botToken}`,
+      'Content-Type': 'application/json'
+    }
+  });
+
+  try {
+    // 1. Create a DM channel with the user
+    console.log(`Creating DM channel with user ${userId}...`);
+    const dmChannelResponse = await discordApi.post('/users/@me/channels', {
+      recipient_id: userId
+    });
+    const channelId = dmChannelResponse.data.id;
+    console.log(`DM channel created: ${channelId}`);
+
+    // 2. Send the message to that channel
+    await discordApi.post(`/channels/${channelId}/messages`, payload);
+    console.log(`Successfully sent DM to user ${userId}`);
+
+  } catch (error) {
+    console.error('Failed to send DM:');
+    if (error.response) {
+      console.error('Discord API Error:', JSON.stringify(error.response.data, null, 2));
+    } else {
+      console.error(error.message);
+    }
+    throw new Error('Failed to send DM.'); // Re-throw to be caught by main handler
+  }
 }
 
 /**
@@ -69,71 +101,42 @@ function transformPayload(notionPayload) {
  * Vercel will run this code every time your /api/transform URL is called.
  */
 module.exports = async (req, res) => {
-  // 1. Check if this is a POST request (which Notion webhooks are)
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method Not Allowed' });
     return;
   }
 
-  // 2. Get the Discord Webhook URL from environment variables
-  const discordWebhookUrl = process.env.DISCORD_WEBHOOK_URL;
-  if (!discordWebhookUrl) {
-    console.error('DISCORD_WEBHOOK_URL is not set.');
+  const botToken = process.env.DISCORD_BOT_TOKEN;
+  if (!botToken) {
+    console.error('DISCORD_BOT_TOKEN is not set.');
     res.status(500).json({ error: 'Server configuration error.' });
     return;
   }
+  
+  console.log('Received payload from Notion...');
 
   try {
-    // 3. Log the incoming body from Notion (useful for debugging!)
-    console.log('Received payload from Notion:', JSON.stringify(req.body, null, 2));
+    // 1. Transform the payload
+    const transformResult = transformPayload(req.body);
 
-    // 4. Transform the payload
-    const discordPayload = transformPayload(req.body);
+    if (!transformResult) {
+      // No user was found in the map, or assignee was blank.
+      res.status(200).json({ message: 'Payload received, but no matching user to DM.' });
+      return;
+    }
+    
+    const { discordUserId, messagePayload } = transformResult;
 
-    // 5. Send the new payload to Discord
-    await axios.post(discordWebhookUrl, discordPayload, {
-      headers: { 'Content-Type': 'application/json' },
-    });
+    // 2. Send the DM
+    await sendDm(botToken, discordUserId, messagePayload);
 
-    // 6. Send a success response back to Notion
-    res.status(200).json({ message: 'Payload sent to Discord successfully.' });
+    // 3. Send a success response back to Notion
+    res.status(200).json({ message: 'DM sent successfully.' });
 
   } catch (error) {
     console.error('Error processing webhook:', error.message);
-    if (error.response) {
-      console.error('Discord API Error:', error.response.data);
-    }
-
-    // --- DEBUGGING CODE ---
-    try {
-      const debugPayload = {
-        content: "⚠️ **DEBUG: Notion Webhook Failed**",
-        embeds: [
-          {
-            title: "Error Message",
-            description: error.message || "An unknown error occurred.",
-            color: 16711680, // Red
-            fields: [
-              {
-                name: "Discord API Error (if any)",
-                value: (error.response ? JSON.stringify(error.response.data) : "N/A")
-              },
-              {
-                name: "Full Notion Payload (First 1000 chars)",
-                value: "```json\n" + JSON.stringify(req.body, null, 2).substring(0, 1000) + "\n```"
-              }
-            ]
-          }
-        ]
-      };
-      await axios.post(discordWebhookUrl, debugPayload, {
-        headers: { 'Content-Type': 'application/json' },
-      });
-    } catch (debugError) {
-      console.error("Failed to send debug message:", debugError.message);
-    }
-    // --- END DEBUGGING CODE ---
-
-    res.status(500).json({ error: 'Failed to send payload to Discord.' });
+    // Unlike the webhook, we won't send a debug message back to Discord
+    // We will just log it in Vercel.
+    res.status(500).json({ error: 'Failed to process webhook.' });
   }
 };
