@@ -11,8 +11,8 @@ function transformPayload(notionPayload) {
   // --- ADD YOUR 10 USERS HERE ---
   const USER_ID_MAP = {
     // "Full Name from Notion": "Discord User ID String"
-    "Brody Moore": "PASTE_BRODY_DISCORD_ID_HERE",
-    "User Two Name": "101740777587089408",
+    "Brody Moore": "101740777587089408",
+    "User Two Name": "PASTE_USER_THREE_ID_HERE",
     "User Three Name": "PASTE_USER_THREE_ID_HERE",
     "User Four Name": "PASTE_USER_FOUR_ID_HERE",
     "User Five Name": "PASTE_USER_FIVE_ID_HERE",
