@@ -6,7 +6,15 @@ const axios = require('axios');
  */
 const USER_ID_MAP = {
     "Brody Moore": "101740777587089408",
-    "User Two Name": "PASTE_USER_TWO_ID_HERE",
+    "Zack Dodge": "807118954165436416",
+    "Tyler Stubbs": "1340020885448425524",
+    "TMC": "274630396061155328",
+    "Maddi": "1173068032940179576",
+    "Liam": "414535958319464460",
+    "Hayden Luloff": "580101236938768586",
+    "Gareth": "570728707296329729",
+    "Binoo": "306248504861261835",
+    "Andrew": "424339865401032730",
     // ... paste your full list here
 };
 
