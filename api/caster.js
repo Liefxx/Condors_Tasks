@@ -50,11 +50,11 @@ function transformPayload(notionPayload) {
     content: `Hi ${casterName}, you have been assigned to a broadcast!`,
     embeds: [
       {
-        title: "🎙️ Casting Assignment",
-        url: pageUrl,
+        title: broadcastName, // <--- TITLE IS NOW THE BROADCAST NAME
+        url: pageUrl,         // <--- LINK IS ON THE TITLE
         color: 10181046, // A purple/pink color for casters
         fields: [
-          { name: "Broadcast Name", value: broadcastName, inline: false },
+          // Removed the redundant "Broadcast Name" field
           { name: "Game", value: gameName, inline: true },
           { name: "Date", value: formattedDate, inline: true },
           { name: "Notes", value: `[Click to view details in Notion](${pageUrl})`, inline: false }
