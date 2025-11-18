@@ -12,15 +12,15 @@ function transformPayload(notionPayload) {
   const USER_ID_MAP = {
     // "Full Name from Notion": "Discord User ID String"
     "Brody Moore": "101740777587089408",
-    "User Two Name": "PASTE_USER_THREE_ID_HERE",
-    "User Three Name": "PASTE_USER_THREE_ID_HERE",
-    "User Four Name": "PASTE_USER_FOUR_ID_HERE",
-    "User Five Name": "PASTE_USER_FIVE_ID_HERE",
-    "User Six Name": "PASTE_USER_SIX_ID_HERE",
-    "User Seven Name": "PASTE_USER_SEVEN_ID_HERE",
-    "User Eight Name": "PASTE_USER_EIGHT_ID_HERE",
-    "User Nine Name": "PASTE_USER_NINE_ID_HERE",
-    "User Ten Name": "PASTE_USER_TEN_ID_HERE"
+    "Zack Dodge": "807118954165436416",
+    "Tyler Stubbs": "1340020885448425524",
+    "TMC": "274630396061155328",
+    "Maddi": "1173068032940179576",
+    "Liam": "414535958319464460",
+    "Hayden Luloff": "580101236938768586",
+    "Gareth": "570728707296329729",
+    "Binoo": "306248504861261835",
+    "Andrew": "424339865401032730"
   };
   // --------------------------
 
